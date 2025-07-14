@@ -1,4 +1,6 @@
 import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -21,20 +23,23 @@ class ResultScreen extends StatefulWidget {
 class _ResultScreenState extends State<ResultScreen> {
   List<String> selectedKeywords = [];
 
-  List<String> get cleanedSummary {
-    return widget.summaryPoints
-        .map((e) => e
-        .replaceAll('•', '')
-        .replaceAll('\n', ' ')
-        .replaceAll(RegExp(r'\s+'), ' ')
-        .trim())
-        .where((e) => e.isNotEmpty)
+  List<String> get cleanedSummary => widget.summaryPoints
+      .map((e) => e.replaceAll('•', '').replaceAll('\n', ' ').trim())
+      .where((e) => e.isNotEmpty)
+      .toList();
+
+  List<String> get filteredSummary {
+    if (selectedKeywords.isEmpty) return cleanedSummary;
+    return cleanedSummary
+        .where((point) => selectedKeywords.any(
+            (k) => point.toLowerCase().contains(k.toLowerCase())))
         .toList();
   }
 
   Future<void> _saveAsPdf() async {
     final pdf = PdfDocument();
     final page = pdf.pages.add();
+
     final text = cleanedSummary.map((e) => '• $e').join('\n');
 
     page.graphics.drawString(
@@ -42,15 +47,17 @@ class _ResultScreenState extends State<ResultScreen> {
       PdfStandardFont(PdfFontFamily.helvetica, 12),
     );
 
-    final bytes = await pdf.save();
+    final List<int> bytes = await pdf.save();
     final dir = await getApplicationDocumentsDirectory();
     final file = File('${dir.path}/summary.pdf');
     await file.writeAsBytes(bytes, flush: true);
     pdf.dispose();
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Saved as summary.pdf')),
-    );
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('✅ Summary saved as summary.pdf')),
+      );
+    }
   }
 
   Future<void> _shareSummary() async {
@@ -60,15 +67,8 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    final filtered = selectedKeywords.isEmpty
-        ? cleanedSummary
-        : cleanedSummary
-        .where((point) => selectedKeywords.any(
-            (k) => point.toLowerCase().contains(k.toLowerCase())))
-        .toList();
-
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final filteredKeywords = widget.keywords
         .map((k) => k.trim())
         .where((k) => k.isNotEmpty)
@@ -78,35 +78,35 @@ class _ResultScreenState extends State<ResultScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text("📄 Summary Insights"),
-        backgroundColor: isDark ? Colors.deepPurple[300] : Colors.deepPurple,
+        centerTitle: true,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16),
         child: Column(
           children: [
-            const Text(
-              "💡 Filter by Keywords",
-              style: TextStyle(fontWeight: FontWeight.bold),
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                "💡 Filter by Keywords",
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
             ),
             const SizedBox(height: 8),
             filteredKeywords.isEmpty
-                ? const Text(
-              "No keywords found.",
-              style: TextStyle(color: Colors.grey),
-            )
+                ? const Text("No keywords found.",
+                style: TextStyle(color: Colors.grey))
                 : Wrap(
               spacing: 8,
+              runSpacing: 4,
               children: filteredKeywords.map((keyword) {
-                final selected = selectedKeywords.contains(keyword);
+                final isSelected = selectedKeywords.contains(keyword);
                 return FilterChip(
                   label: Text(keyword),
-                  selected: selected,
-                  selectedColor: isDark
-                      ? Colors.deepPurple[200]
-                      : Colors.deepPurple[100],
-                  onSelected: (bool value) {
+                  selected: isSelected,
+                  selectedColor: theme.colorScheme.primary.withOpacity(0.2),
+                  onSelected: (value) {
                     setState(() {
-                      selected
+                      isSelected
                           ? selectedKeywords.remove(keyword)
                           : selectedKeywords.add(keyword);
                     });
@@ -114,46 +114,67 @@ class _ResultScreenState extends State<ResultScreen> {
                 );
               }).toList(),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 20),
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "📌 Summary",
+                "📌 Summary Points",
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(height: 10),
             Expanded(
-              child: filtered.isEmpty
-                  ? const Center(child: Text("No summary points to show."))
-                  : ListView.builder(
-                itemCount: filtered.length,
-                itemBuilder: (_, index) => ListTile(
-                  leading: const Text("•",
-                      style: TextStyle(fontSize: 20)),
-                  title: Text(filtered[index]),
-                ),
+              child: filteredSummary.isEmpty
+                  ? const Center(child: Text("No summary points to display."))
+                  : ListView.separated(
+                itemCount: filteredSummary.length,
+                separatorBuilder: (_, __) =>
+                const Divider(height: 8, thickness: 0.5),
+                itemBuilder: (_, index) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? Colors.white.withOpacity(0.05)
+                          : Colors.grey[100],
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text("• ",
+                            style: TextStyle(fontSize: 18)),
+                        Expanded(
+                          child: Text(
+                            filteredSummary[index],
+                            style: theme.textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
+            const SizedBox(height: 10),
             const Divider(),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.picture_as_pdf),
-                    label: const Text("Save PDF"),
-                    onPressed: _saveAsPdf,
-                  ),
-                  const SizedBox(width: 12),
-                  ElevatedButton.icon(
-                    icon: const Icon(Icons.share),
-                    label: const Text("Share"),
-                    onPressed: _shareSummary,
-                  ),
-                ],
-              ),
-            )
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.picture_as_pdf_rounded,color: Colors.white,),
+                  label: const Text("Save as PDF"),
+                  onPressed: _saveAsPdf,
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.share_rounded,color: Colors.white,),
+                  label: const Text("Share Summary"),
+                  onPressed: _shareSummary,
+                ),
+              ],
+            ),
           ],
         ),
       ),

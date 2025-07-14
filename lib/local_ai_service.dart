@@ -1,31 +1,32 @@
 class LocalAIService {
-  static String summarize(String text) {
-    List<String> sentences = text.split('. ');
-    if (sentences.length <= 3) return text;
+  /// Summarizes the input [text] by extracting the first [maxSentences] sentences.
+  static String summarize(String text, {int maxSentences = 3}) {
+    final sentences = text.split(RegExp(r'(?<=[.?!])\s+'));
+    if (sentences.length <= maxSentences) return text;
 
-    return sentences.take(3).join('. ') + '.';
+    return sentences.take(maxSentences).join(' ');
   }
 
-  static List<String> extractKeywords(String text) {
-    final words = text
-        .toLowerCase()
-        .replaceAll(RegExp(r'[^\w\s]'), '')
-        .split(' ')
+  /// Extracts up to [maxKeywords] from the input [text] based on word frequency.
+  static List<String> extractKeywords(String text, {int maxKeywords = 5}) {
+    final cleanedText = text.toLowerCase().replaceAll(RegExp(r'[^\w\s]'), '');
+    final words = cleanedText
+        .split(RegExp(r'\s+'))
         .where((word) => word.length > 4 && !_stopWords.contains(word))
         .toList();
 
-    final freq = <String, int>{};
+    final freqMap = <String, int>{};
     for (var word in words) {
-      freq[word] = (freq[word] ?? 0) + 1;
+      freqMap[word] = (freqMap[word] ?? 0) + 1;
     }
 
-    final sorted = freq.entries.toList()
+    final sorted = freqMap.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    return sorted.take(5).map((e) => e.key).toList();
+    return sorted.take(maxKeywords).map((e) => e.key).toList();
   }
 
-  static final List<String> _stopWords = [
+  static final Set<String> _stopWords = {
     'about', 'above', 'after', 'again', 'against', 'all', 'am', 'are', 'as',
     'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between',
     'both', 'but', 'by', 'could', 'did', 'do', 'does', 'doing', 'down', 'during',
@@ -39,5 +40,5 @@ class LocalAIService {
     'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was',
     'we', 'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom',
     'why', 'with', 'would', 'you', 'your', 'yours', 'yourself', 'yourselves'
-  ];
+  };
 }
