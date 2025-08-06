@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
@@ -22,6 +23,9 @@ class ResultScreen extends StatefulWidget {
 
 class _ResultScreenState extends State<ResultScreen> {
   List<String> selectedKeywords = [];
+  final FlutterTts flutterTts = FlutterTts();
+  int currentReadIndex = -1;
+  bool isReading = false;
 
   List<String> get cleanedSummary => widget.summaryPoints
       .map((e) => e.replaceAll('•', '').replaceAll('\n', ' ').trim())
@@ -39,7 +43,6 @@ class _ResultScreenState extends State<ResultScreen> {
   Future<void> _saveAsPdf() async {
     final pdf = PdfDocument();
     final page = pdf.pages.add();
-
     final text = cleanedSummary.map((e) => '• $e').join('\n');
 
     page.graphics.drawString(
@@ -63,6 +66,56 @@ class _ResultScreenState extends State<ResultScreen> {
   Future<void> _shareSummary() async {
     final text = cleanedSummary.map((e) => '• $e').join('\n');
     await Share.share(text);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    flutterTts.setLanguage("en-US");
+    flutterTts.setSpeechRate(0.45);
+    flutterTts.setPitch(1.0);
+
+    flutterTts.setCompletionHandler(() {
+      setState(() {
+        currentReadIndex++;
+      });
+
+      if (currentReadIndex < filteredSummary.length) {
+        _speak(filteredSummary[currentReadIndex]);
+      } else {
+        setState(() {
+          isReading = false;
+          currentReadIndex = -1;
+        });
+      }
+    });
+  }
+
+  Future<void> _speak(String text) async {
+    await flutterTts.speak(text);
+  }
+
+  Future<void> _stopSpeaking() async {
+    await flutterTts.stop();
+    setState(() {
+      isReading = false;
+      currentReadIndex = -1;
+    });
+  }
+
+  void _startSpeaking() {
+    if (filteredSummary.isEmpty) return;
+    setState(() {
+      isReading = true;
+      currentReadIndex = 0;
+    });
+    _speak(filteredSummary[0]);
+  }
+
+  @override
+  void dispose() {
+    flutterTts.stop();
+    super.dispose();
   }
 
   @override
@@ -103,12 +156,15 @@ class _ResultScreenState extends State<ResultScreen> {
                 return FilterChip(
                   label: Text(keyword),
                   selected: isSelected,
-                  selectedColor: theme.colorScheme.primary.withOpacity(0.2),
+                  selectedColor:
+                  theme.colorScheme.primary.withOpacity(0.2),
                   onSelected: (value) {
                     setState(() {
                       isSelected
                           ? selectedKeywords.remove(keyword)
                           : selectedKeywords.add(keyword);
+                      // Reset reading if filter changes
+                      _stopSpeaking();
                     });
                   },
                 );
@@ -131,9 +187,13 @@ class _ResultScreenState extends State<ResultScreen> {
                 separatorBuilder: (_, __) =>
                 const Divider(height: 8, thickness: 0.5),
                 itemBuilder: (_, index) {
-                  return Container(
+                  final isCurrent = index == currentReadIndex;
+                  return AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
                     decoration: BoxDecoration(
-                      color: isDark
+                      color: isCurrent
+                          ? theme.colorScheme.primary.withOpacity(0.1)
+                          : isDark
                           ? Colors.white.withOpacity(0.05)
                           : Colors.grey[100],
                       borderRadius: BorderRadius.circular(12),
@@ -143,12 +203,16 @@ class _ResultScreenState extends State<ResultScreen> {
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text("• ",
-                            style: TextStyle(fontSize: 18)),
+                        const Text("• ", style: TextStyle(fontSize: 18)),
                         Expanded(
                           child: Text(
                             filteredSummary[index],
-                            style: theme.textTheme.bodyMedium,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: isCurrent
+                                  ? FontWeight.bold
+                                  : FontWeight.normal,
+                            ),
                           ),
                         ),
                       ],
@@ -163,13 +227,14 @@ class _ResultScreenState extends State<ResultScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.picture_as_pdf_rounded,color: Colors.white,),
+                  icon: const Icon(Icons.picture_as_pdf_rounded,
+                      color: Colors.white),
                   label: const Text("Save as PDF"),
                   onPressed: _saveAsPdf,
                 ),
                 const SizedBox(width: 12),
                 ElevatedButton.icon(
-                  icon: const Icon(Icons.share_rounded,color: Colors.white,),
+                  icon: const Icon(Icons.share_rounded, color: Colors.white),
                   label: const Text("Share Summary"),
                   onPressed: _shareSummary,
                 ),
@@ -177,6 +242,13 @@ class _ResultScreenState extends State<ResultScreen> {
             ),
           ],
         ),
+      ),
+      floatingActionButton: filteredSummary.isEmpty
+          ? null
+          : FloatingActionButton.extended(
+        onPressed: isReading ? _stopSpeaking : _startSpeaking,
+        icon: Icon(isReading ? Icons.stop : Icons.play_arrow),
+        label: Text(isReading ? "Stop Reading" : "Start Reading"),
       ),
     );
   }
