@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_tts/flutter_tts.dart';
@@ -35,8 +34,8 @@ class _ResultScreenState extends State<ResultScreen> {
   List<String> get filteredSummary {
     if (selectedKeywords.isEmpty) return cleanedSummary;
     return cleanedSummary
-        .where((point) => selectedKeywords.any(
-            (k) => point.toLowerCase().contains(k.toLowerCase())))
+        .where((point) => selectedKeywords
+            .any((k) => point.toLowerCase().contains(k.toLowerCase())))
         .toList();
   }
 
@@ -71,6 +70,7 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   void initState() {
     super.initState();
+
     flutterTts.setLanguage("en-US");
     flutterTts.setSpeechRate(0.45);
     flutterTts.setPitch(1.0);
@@ -87,6 +87,13 @@ class _ResultScreenState extends State<ResultScreen> {
           isReading = false;
           currentReadIndex = -1;
         });
+      }
+    });
+
+    // Start speaking automatically after the screen builds
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (filteredSummary.isNotEmpty) {
+        _startSpeaking();
       }
     });
   }
@@ -147,29 +154,29 @@ class _ResultScreenState extends State<ResultScreen> {
             const SizedBox(height: 8),
             filteredKeywords.isEmpty
                 ? const Text("No keywords found.",
-                style: TextStyle(color: Colors.grey))
+                    style: TextStyle(color: Colors.grey))
                 : Wrap(
-              spacing: 8,
-              runSpacing: 4,
-              children: filteredKeywords.map((keyword) {
-                final isSelected = selectedKeywords.contains(keyword);
-                return FilterChip(
-                  label: Text(keyword),
-                  selected: isSelected,
-                  selectedColor:
-                  theme.colorScheme.primary.withOpacity(0.2),
-                  onSelected: (value) {
-                    setState(() {
-                      isSelected
-                          ? selectedKeywords.remove(keyword)
-                          : selectedKeywords.add(keyword);
-                      // Reset reading if filter changes
-                      _stopSpeaking();
-                    });
-                  },
-                );
-              }).toList(),
-            ),
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: filteredKeywords.map((keyword) {
+                      final isSelected = selectedKeywords.contains(keyword);
+                      return FilterChip(
+                        label: Text(keyword),
+                        selected: isSelected,
+                        selectedColor:
+                            theme.colorScheme.primary.withOpacity(0.2),
+                        onSelected: (value) {
+                          setState(() {
+                            isSelected
+                                ? selectedKeywords.remove(keyword)
+                                : selectedKeywords.add(keyword);
+                            // Reset reading if filter changes
+                            _stopSpeaking();
+                          });
+                        },
+                      );
+                    }).toList(),
+                  ),
             const SizedBox(height: 20),
             const Align(
               alignment: Alignment.centerLeft,
@@ -183,43 +190,43 @@ class _ResultScreenState extends State<ResultScreen> {
               child: filteredSummary.isEmpty
                   ? const Center(child: Text("No summary points to display."))
                   : ListView.separated(
-                itemCount: filteredSummary.length,
-                separatorBuilder: (_, __) =>
-                const Divider(height: 8, thickness: 0.5),
-                itemBuilder: (_, index) {
-                  final isCurrent = index == currentReadIndex;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 300),
-                    decoration: BoxDecoration(
-                      color: isCurrent
-                          ? theme.colorScheme.primary.withOpacity(0.1)
-                          : isDark
-                          ? Colors.white.withOpacity(0.05)
-                          : Colors.grey[100],
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 12, horizontal: 16),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text("• ", style: TextStyle(fontSize: 18)),
-                        Expanded(
-                          child: Text(
-                            filteredSummary[index],
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: isCurrent
-                                  ? FontWeight.bold
-                                  : FontWeight.normal,
-                            ),
+                      itemCount: filteredSummary.length,
+                      separatorBuilder: (_, __) =>
+                          const Divider(height: 8, thickness: 0.5),
+                      itemBuilder: (_, index) {
+                        final isCurrent = index == currentReadIndex;
+                        return AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          decoration: BoxDecoration(
+                            color: isCurrent
+                                ? theme.colorScheme.primary.withOpacity(0.1)
+                                : isDark
+                                    ? Colors.white.withOpacity(0.05)
+                                    : Colors.grey[100],
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        ),
-                      ],
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12, horizontal: 16),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text("• ", style: TextStyle(fontSize: 18)),
+                              Expanded(
+                                child: Text(
+                                  filteredSummary[index],
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: isCurrent
+                                        ? FontWeight.bold
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
             const SizedBox(height: 10),
             const Divider(),
@@ -229,26 +236,39 @@ class _ResultScreenState extends State<ResultScreen> {
                 ElevatedButton.icon(
                   icon: const Icon(Icons.picture_as_pdf_rounded,
                       color: Colors.white),
-                  label: const Text("Save as PDF"),
+                  label: const Text("Save"),
                   onPressed: _saveAsPdf,
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
+                ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  onPressed: () {
+                    if (isReading) {
+                      _stopSpeaking();
+                    } else if (filteredSummary.isNotEmpty) {
+                      _startSpeaking();
+                    }
+                  },
+                  child: Icon(
+                    isReading ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(width: 8),
                 ElevatedButton.icon(
                   icon: const Icon(Icons.share_rounded, color: Colors.white),
-                  label: const Text("Share Summary"),
+                  label: const Text("Share"),
                   onPressed: _shareSummary,
                 ),
               ],
             ),
           ],
         ),
-      ),
-      floatingActionButton: filteredSummary.isEmpty
-          ? null
-          : FloatingActionButton.extended(
-        onPressed: isReading ? _stopSpeaking : _startSpeaking,
-        icon: Icon(isReading ? Icons.stop : Icons.play_arrow),
-        label: Text(isReading ? "Stop Reading" : "Start Reading"),
       ),
     );
   }
