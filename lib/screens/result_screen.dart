@@ -102,13 +102,25 @@ class _ResultScreenState extends State<ResultScreen> {
     await flutterTts.speak(text);
   }
 
-  Future<void> _stopSpeaking() async {
-    await flutterTts.stop();
+  Future<void> _pauseSpeaking() async {
+    await flutterTts.pause();
     setState(() {
       isReading = false;
-      currentReadIndex = -1;
     });
   }
+
+  void _resumeSpeaking() {
+    if (currentReadIndex >= 0 && currentReadIndex < filteredSummary.length) {
+      setState(() {
+        isReading = true;
+      });
+      _speak(filteredSummary[currentReadIndex]);
+    } else {
+      // Restart if out of bounds
+      _startSpeaking();
+    }
+  }
+
 
   void _startSpeaking() {
     if (filteredSummary.isEmpty) return;
@@ -170,8 +182,6 @@ class _ResultScreenState extends State<ResultScreen> {
                             isSelected
                                 ? selectedKeywords.remove(keyword)
                                 : selectedKeywords.add(keyword);
-                            // Reset reading if filter changes
-                            _stopSpeaking();
                           });
                         },
                       );
@@ -249,9 +259,9 @@ class _ResultScreenState extends State<ResultScreen> {
                   ),
                   onPressed: () {
                     if (isReading) {
-                      _stopSpeaking();
+                      _pauseSpeaking();
                     } else if (filteredSummary.isNotEmpty) {
-                      _startSpeaking();
+                      _resumeSpeaking() ;
                     }
                   },
                   child: Icon(
