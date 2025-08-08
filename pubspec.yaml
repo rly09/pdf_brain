@@ -30,6 +30,7 @@ flutter:
 
   assets:
     - assets/icon.png
+    - assets/icons/brain_icon.png
 
 flutter_icons:
   android: true
