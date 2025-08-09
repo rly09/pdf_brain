@@ -17,6 +17,8 @@ dependencies:
   share_plus: ^11.0.0
   google_fonts: ^6.2.1
   flutter_tts: ^4.2.3
+  flutter_dotenv: ^5.2.1
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
@@ -31,6 +33,7 @@ flutter:
   assets:
     - assets/icon.png
     - assets/icons/brain_icon.png
+    - .env
 
 flutter_icons:
   android: true
