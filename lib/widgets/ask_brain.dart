@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../screens/chatbot_page.dart';
+
 class AskBrain extends StatelessWidget {
   const AskBrain({super.key});
 
@@ -8,8 +10,9 @@ class AskBrain extends StatelessWidget {
     final theme = Theme.of(context);
     return GestureDetector(
       onTap: () {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("🧠 Chatbot will be added soon!")),
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const ChatbotScreen()),
         );
       },
       child: Container(
