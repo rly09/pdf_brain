@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../../screens/result_screen.dart';
 import '../../services/gemini_service.dart';
+import '../../widgets/ask_brain.dart';
 
 class UploadScreen extends StatefulWidget {
   const UploadScreen({Key? key}) : super(key: key);
@@ -82,7 +83,8 @@ class _UploadScreenState extends State<UploadScreen> {
   }
 
   void showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -100,48 +102,57 @@ class _UploadScreenState extends State<UploadScreen> {
         title: const Text('PDF Brain'),
         centerTitle: true,
       ),
-      body: Center(
-        child: ValueListenableBuilder<bool>(
-          valueListenable: isLoading,
-          builder: (context, loading, _) {
-            if (loading) {
-              return const CircularProgressIndicator();
-            }
+      body: Stack(
+        children: [
+          Center(
+            child: ValueListenableBuilder<bool>(
+              valueListenable: isLoading,
+              builder: (context, loading, _) {
+                if (loading) {
+                  return const CircularProgressIndicator();
+                }
 
-            return Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.picture_as_pdf_rounded,
-                  size: 90,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32.0),
-                  child: Text(
-                    "Upload a PDF to generate AI-powered summaries and extract key terms with Gemini.",
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                ),
-                const SizedBox(height: 30),
-                ElevatedButton.icon(
-                  onPressed: pickAndExtractText,
-                  icon: const Icon(Icons.upload_file, color: Colors.white),
-                  label: const Text("Upload PDF"),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 14, horizontal: 28),
-                    textStyle: theme.textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
+                return Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.picture_as_pdf_rounded,
+                      size: 90,
+                      color: theme.colorScheme.primary,
                     ),
-                  ),
-                ),
-              ],
-            );
-          },
-        ),
+                    const SizedBox(height: 24),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                      child: Text(
+                        "Upload a PDF to generate AI-powered summaries and extract key terms with Gemini.",
+                        textAlign: TextAlign.center,
+                        style: theme.textTheme.bodyLarge,
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    ElevatedButton.icon(
+                      onPressed: pickAndExtractText,
+                      icon: const Icon(Icons.upload_file, color: Colors.white),
+                      label: const Text("Upload PDF"),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 14, horizontal: 28),
+                        textStyle: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+          const Positioned(
+            bottom: 80,
+            right: 20,
+            child: AskBrain(),
+          ),
+        ],
       ),
     );
   }
